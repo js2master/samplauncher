@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>omp-cef Android · stage 6</title>
+<style>
+  :root { color-scheme: dark; }
+  html, body {
+    margin: 0; height: 100%;
+    /* 关键：全屏透明背景，游戏画面必须透出来 */
+    background: transparent;
+    font: 15px/1.5 -apple-system, "Noto Sans SC", Roboto, sans-serif;
+    -webkit-user-select: none; user-select: none;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .panel {
+    position: absolute;
+    left: 20px; top: 20px; right: 20px; bottom: 20px;
+    border: 2px solid #38bdf8;
+    border-radius: 14px;
+    background: rgba(8, 20, 32, 0.86);
+    color: #e8f2ff;
+    display: flex; flex-direction: column;
+    padding: 16px 20px;
+    box-sizing: border-box;
+  }
+  .panel.flash { border-color: #fbbf24; box-shadow: 0 0 0 3px rgba(251,191,36,.45) inset; }
+  h1 { margin: 0 0 2px; font-size: 18px; color: #38bdf8; font-weight: 700; letter-spacing: .4px; }
+  .sub { color: #7c93a8; font-size: 12px; margin-bottom: 10px; }
+  .stats { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 10px; font-size: 12px; }
+  .stat { padding: 3px 9px; border-radius: 6px; background: #10243a; border: 1px solid #21456b; color: #9dc4e6; }
+  .stat b { color: #6ee7b7; font-weight: 600; }
+  .stat.bad b { color: #fca5a5; }
+  .row { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 10px; }
+  button {
+    font: inherit; font-size: 14px;
+    padding: 8px 15px; border-radius: 9px;
+    border: 1px solid #2f4a63; background: #16283a; color: #cfe6ff;
+    cursor: pointer;
+  }
+  button:active { background: #1f3c56; }
+  button.on { background: #0ea5e9; border-color: #38bdf8; color: #04121f; font-weight: 600; }
+  /* 阶段6：IME 输入框。高度做大，方便真机盲点位（点中即弹键盘）。 */
+  .imebox { display: flex; gap: 10px; align-items: center; margin-bottom: 10px; }
+  .imebox label { color: #7c93a8; font-size: 12px; white-space: nowrap; }
+  #tin {
+    flex: 1; min-width: 0; height: 54px;
+    font: inherit; font-size: 18px;
+    padding: 0 12px; border-radius: 9px;
+    border: 1px solid #2f4a63; background: #0b1a29; color: #e8f2ff;
+    -webkit-user-select: text; user-select: text;
+    box-sizing: border-box;
+  }
+  #tin:focus { border-color: #38bdf8; outline: none; box-shadow: 0 0 0 2px rgba(56,189,248,.25); }
+  .log {
+    flex: 1; overflow: auto;
+    font: 12px/1.55 ui-monospace, Menlo, Consolas, monospace;
+    color: #8fd3ff; white-space: pre-wrap;
+    border-top: 1px solid #1d3348; padding-top: 8px; margin-top: 2px;
+  }
+  .log .srv { color: #fbbf24; }
+  .log .up  { color: #6ee7b7; }
+  .log .ime { color: #f9a8d4; }
+</style>
+</head>
+<body>
+<div class="panel" id="panel">
+  <h1>omp-cef · Android · 阶段6 输入</h1>
+  <div class="sub">触摸放行/接管 → IME 中文输入 → 硬件键上行 PressKey → 聊天状态 ChatInputState</div>
+
+  <div class="stats">
+    <div class="stat" id="st-cef">window.cef: <b id="v-cef">?</b></div>
+    <div class="stat" id="st-down">下行事件: <b id="v-down">0</b></div>
+    <div class="stat" id="st-up">上行事件: <b id="v-up">0</b></div>
+    <div class="stat" id="st-early">首帧前排队: <b id="v-early">未收到</b></div>
+    <div class="stat" id="st-chat">游戏聊天: <b id="v-chat">关闭</b></div>
+    <div class="stat" id="st-vp">视口: <b id="v-vp">?</b></div>
+    <div class="stat" id="st-url">来源: <b id="v-url">?</b></div>
+  </div>
+
+  <div class="imebox">
+    <label>IME 输入 →</label>
+    <input id="tin" type="text" placeholder="点这里弹出输入法，输入后上行 test:input" autocomplete="off" spellcheck="false">
+  </div>
+
+  <div class="row">
+    <button onclick="pick(this,'甲',1)">甲</button>
+    <button onclick="pick(this,'乙',2)">乙</button>
+    <button onclick="pick(this,'丙',3)">丙</button>
+    <button onclick="cef.emit('test:noargs')">空参数</button>
+    <button onclick="cef.emit('test:nonScalar',{a:1},[1,2])">非标量</button>
+    <button onclick="blurInput()">收起键盘</button>
+  </div>
+
+  <div class="log" id="log"></div>
+</div>
+
+<script>
+  var logEl = document.getElementById('log');
+  var down = 0, up = 0, seq = 0;
+
+  function log(msg, cls) {
+    seq++;
+    var line = document.createElement('div');
+    if (cls) line.className = cls;
+    line.textContent = '[' + seq + '] ' + msg;
+    logEl.insertBefore(line, logEl.firstChild);
+  }
+  function el(id) { return document.getElementById(id); }
+
+  // ---- 阶段4 核心：window.cef 由 CefResourceProvider 内联注入（文档解析前就绪）
+  if (window.cef) {
+    el('v-cef').textContent = 'ready (' + (window.cef.__mark || '?') + ')';
+    log('window.cef 已注入，页面脚本可直接注册回调', 'up');
+  } else {
+    el('v-cef').textContent = 'MISSING';
+    el('st-cef').className = 'stat bad';
+    log('window.cef 未注入 —— 阶段4 失败');
+  }
+
+  function onServerEvent(name) {
+    down++;
+    el('v-down').textContent = down;
+    return name;
+  }
+
+  if (window.cef) {
+    // 1) 服务端在 CreateBrowser 后立刻发送，通常在页面加载完成之前到达，
+    //    用来验证 native/WebView 侧的排队补发。
+    cef.on('test:early', function (tag, n) {
+      onServerEvent('test:early');
+      el('v-early').textContent = String(tag);
+      log('收到首帧前事件 test:early: ' + tag + ' / ' + n + ' (' + typeof n + ')', 'srv');
+      cef.emit('test:earlyAck', tag, n, true, 2.25);
+      up++; el('v-up').textContent = up;
+    });
+
+    // 2) 四类型参数：string / int / float / bool
+    //    注意积分值：JS 里 7.0 与 7 是同一个数，原版 CEF 的 CefV8Value::IsInt()
+    //    对整数值返回 true，所以整数值一律走 Integer；只有真正带小数的值才是
+    //    Float。这里故意用 frac*2+0.5 保证小数部分非零。
+    cef.on('test:hello', function (who, num, frac, flag) {
+      onServerEvent('test:hello');
+      log('收到 test:hello: ' + who + ' int=' + num + '(' + typeof num + ')'
+          + ' float=' + frac + '(' + typeof frac + ')'
+          + ' bool=' + flag + '(' + typeof flag + ')', 'srv');
+      cef.emit('test:ack',
+        'ack:' + who + '🚀',
+        num + 1,
+        frac * 2 + 0.5,
+        !flag);
+      up++; el('v-up').textContent = up;
+    });
+
+    // 3) 命令式事件：服务端要求高亮，等 1.2s 自动恢复
+    cef.on('test:command', function (cmd, ms) {
+      onServerEvent('test:command');
+      log('收到 test:command: ' + cmd + ' (' + ms + 'ms)', 'srv');
+      var p = el('panel');
+      p.classList.add('flash');
+      setTimeout(function () { p.classList.remove('flash'); }, ms || 1200);
+      cef.emit('test:commandAck', cmd);
+      up++; el('v-up').textContent = up;
+    });
+
+    // 4) cef.off 语义：注册后立即取消，服务端后续发来的 ping 不应触发
+    var pingCount = 0;
+    function onPing() { pingCount++; }
+    cef.on('test:ping', onPing);
+    cef.off('test:ping', onPing);
+    cef.on('test:ping', function () {
+      onServerEvent('test:ping');
+      log('test:ping 到达（旧回调已通过 cef.off 移除，pingCount=' + pingCount + '）', 'srv');
+      cef.emit('test:pingAck', pingCount);
+      up++; el('v-up').textContent = up;
+    });
+
+    // 5) 阶段6：客户端内部事件（PC ChatHook::SetChatInputState 的本地分支）。
+    //    这是"客户端 -> 页面"的单向事件，页面只读不回报。
+    cef.on('omp:cef:internal:chatInputState', function (open) {
+      el('v-chat').textContent = open ? '打开' : '关闭';
+      el('st-chat').className = 'stat' + (open ? ' bad' : '');
+      log('内部事件 chatInputState open=' + open, 'srv');
+    });
+  }
+
+  function pick(btn, name, index) {
+    var all = document.querySelectorAll('button');
+    for (var i = 0; i < all.length; i++) all[i].classList.remove('on');
+    btn.classList.add('on');
+    if (!window.cef) { log('cef 不可用，点击无法上行'); return; }
+    // 一次上行验证四种标量类型
+    cef.emit('test:click', name, index, true, 1.5 + index / 10);
+    up++; el('v-up').textContent = up;
+    log('cef.emit test:click("' + name + '", ' + index + ', true, ' + (1.5 + index / 10) + ')', 'up');
+  }
+
+  // ---- 阶段6：IME。input 事件由系统输入法提交，中文/emoji 都经由同一条路径，
+  //      上行后由服务端逐字节校验 UTF-8。
+  var tin = el('tin');
+  var imeSeq = 0;
+  tin.addEventListener('input', function () {
+    if (!window.cef) return;
+    imeSeq++;
+    cef.emit('test:input', tin.value, tin.value.length);
+    up++; el('v-up').textContent = up;
+    log('IME 输入 #' + imeSeq + ': "' + tin.value + '" (' + tin.value.length + ' chars)', 'ime');
+  });
+  tin.addEventListener('focus', function () { log('输入框获得焦点（Chromium 请求输入法）', 'ime'); });
+  tin.addEventListener('blur', function () { log('输入框失焦', 'ime'); });
+
+  // ---- 阶段7：任意落点探针。
+  //     World2D 页面被投影到屏幕上的某个矩形里，用它证明"落在投影矩形内的触摸真的
+  //     到达了页面"、"矩形外的触摸回到了游戏"。不依赖页面布局，因此页面被压扁也有效。
+  document.addEventListener('pointerdown', function (e) {
+    if (!window.cef) return;
+    var target = e.target && e.target.id ? e.target.id
+        : (e.target && e.target.tagName ? e.target.tagName : '?');
+    cef.emit('test:tap', String(target), Math.round(e.clientX), Math.round(e.clientY));
+    up++; el('v-up').textContent = up;
+    log('落点 ' + target + ' @' + Math.round(e.clientX) + ',' + Math.round(e.clientY), 'ime');
+  }, true);
+
+  function blurInput() {
+    tin.blur();
+    if (window.cef) cef.emit('test:blur');
+  }
+
+  // ---- 阶段6：视口探针。
+  //     键盘弹出时 WebView 的*可视高度*必须真的变小，Chromium 才会把聚焦元素滚进
+  //     可视区。若客户端只是把整窗平移（adjustPan），innerHeight 不变、页面下半部分
+  //     照样被盖住。这里把 innerHeight / visualViewport.height 上行，服务端据此判断
+  //     客户端到底做了哪一种 —— 不依赖客户端日志。
+  function reportViewport(tag) {
+    var ih = Math.round(innerHeight);
+    var vv = window.visualViewport ? Math.round(window.visualViewport.height) : 0;
+    el('v-vp').textContent = ih + ' / ' + vv;
+    if (!window.cef) return;
+    cef.emit('test:viewport', String(tag), ih, vv, Math.round(screen.height));
+    up++; el('v-up').textContent = up;
+    log('视口 ' + tag + ': innerHeight=' + ih + ' vv=' + vv, 'ime');
+  }
+  window.addEventListener('resize', function () { reportViewport('resize'); });
+  if (window.visualViewport) {
+    window.visualViewport.addEventListener('resize', function () { reportViewport('vv'); });
+  }
+  tin.addEventListener('focus', function () { setTimeout(function () { reportViewport('focus'); }, 350); });
+  tin.addEventListener('blur', function () { setTimeout(function () { reportViewport('blur'); }, 350); });
+
+  log('页面已加载 · ' + innerWidth + 'x' + innerHeight + ' · dpr ' + (window.devicePixelRatio || 1));
+  var origin = document.getElementById('v-url');
+  if (origin) origin.textContent = location.pathname;
+  if (window.cef) {
+    // WebView 刚 attach 时布局可能还没完成，innerWidth / innerHeight 会短暂为 0。
+    // 那个时刻上报"就绪"没有意义（服务端会把 0x0 当成视口尺寸，World2D 的
+    // 尺寸断言就会误报失败）。每 50ms 重试到尺寸有效，最多等 1s；兜底仍然发
+    // 一次，保证 probe:ready 永远不会缺席。
+    var readyTries = 0;
+    var emitReady = function () {
+      var w = Math.round(innerWidth), h = Math.round(innerHeight);
+      if ((w <= 0 || h <= 0) && readyTries < 20) {
+        readyTries++;
+        setTimeout(emitReady, 50);
+        return;
+      }
+      cef.emit('probe:ready',
+        document.title,
+        w,
+        h,
+        window.devicePixelRatio || 1,
+        navigator.userAgent.indexOf('; wv') >= 0);
+      up++; el('v-up').textContent = up;
+      log('已发送 probe:ready ' + w + 'x' + h, 'up');
+    };
+    emitReady();
+  }
+</script>
+</body>
+</html>

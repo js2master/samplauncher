@@ -1,0 +1,72 @@
+Attribution & Legal Notes
+=========================
+
+This project's original and modified source code is licensed under the
+GNU General Public License v3.0 (see LICENSE), while preserving upstream
+attributions and third-party license terms (see third_party/licenses/).
+
+Upstream Attribution
+--------------------
+
+This project initially branched from "Alyn SA-MP Mobile" (v17.x), whose
+source code was released publicly and for free by its author:
+
+    https://github.com/Fiki-io/Alyn-Samp-Mobile
+
+Original authorship notices ("Created by ALYN ..." file headers) are
+preserved on purpose. Extensive bug fixes, arm64/Android 14+ adaptations,
+rendering/input/networking overhauls, launcher redesign, and tooling were
+developed independently in this repository.
+
+Proprietary Game Content (Excluded from This Repository)
+--------------------------------------------------------
+
+This repository does NOT distribute proprietary Rockstar Games binaries,
+game data, or commercial fonts:
+
+  * GTA: San Andreas native binaries (libGTASA.so, libImmEmulatorJ.so),
+    GTA:SA APK assets (assets/data, assets/Text, assets/Fonts, etc.), and
+    game data files belong to Rockstar Games / Take-Two Interactive and
+    must be supplied locally by the user from their own legally owned
+    GTA: San Andreas Android v2.10 copy (see tools/engine/prepare_gtasa.py).
+  * Commercial UI fonts (Gotham, Museo Sans, Helvetica Neue, etc.) have
+    been removed and replaced with open-source fonts (Roboto, Apache-2.0;
+    Montserrat via Google Fonts, OFL-1.1).
+
+Third-Party Components
+----------------------
+
+Full component inventory and license links/texts are provided in
+third_party/licenses/THIRD_PARTY_NOTICES.md:
+
+  * AndroidModLoader (libAML.so) — MIT License (Copyright © RusJJ)
+  * MonetLoaderOSS (libmonetloader.so, libluajit-5.1.so, monetloader_lib.zip)
+    — GPL-3.0 (LuaJIT: MIT; LibreSSL: ISC/OpenSSL)
+  * Dear ImGui — MIT License
+  * spdlog / fmt — MIT License
+  * RapidJSON — MIT License
+  * Opus Audio Codec — BSD-3-Clause
+  * RakNet (SA-MP client fork) — BSD-style License
+  * GlossHook — MIT License
+  * CLEO Android opcode & touch specification inspiration — BSD-3-Clause
+  * omp-cef protocol & client specification reference — MIT License (aurora-mp/omp-cef)
+  * KCP (ikcp) — MIT License (Copyright © skywind3000)
+  * PicoSHA2 — MIT License (Copyright © 2017 okdshin)
+  * BLAKE2 reference implementation — CC0-1.0 / Apache-2.0 (Copyright © 2012 Samuel Neves)
+  * tiny-AES-c — Unlicense (Public Domain)
+  * TweetNaCl — Public Domain
+  * OpenAL Soft (libOpenAL*.so) — LGPL-2.0+
+  * LLVM libc++_shared (libc++_shared.so) — Apache-2.0 WITH LLVM-exception
+  * Roboto Fonts — Apache-2.0
+  * BASS audio library (libBASS*.so) — Un4seen Developments
+    (free for non-commercial use; commercial use requires a separate license)
+  * Java runtime glue classes under com/rockstargames, com/wardrumstudios,
+    and com/nvidia originate from Android GTA:SA runtime interfaces and
+    retain the rights of their respective owners.
+
+Disclaimer
+----------
+
+This project is NOT affiliated with or endorsed by Rockstar Games,
+Take-Two Interactive, the SA-MP team, or the original Alyn author.
+Do not redistribute proprietary game binaries or assets publicly.

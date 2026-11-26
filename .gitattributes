@@ -1,0 +1,49 @@
+# Normalize line endings: LF in the repository, native in the worktree.
+* text=auto
+
+# Keep shell scripts and Gradle/config files LF across all platforms
+gradlew text eol=lf
+*.sh text eol=lf
+*.py text eol=lf
+*.gradle text eol=lf
+*.toml text eol=lf
+*.properties text eol=lf
+*.yml text eol=lf
+*.yaml text eol=lf
+
+# Windows scripts
+*.bat text eol=crlf
+*.ps1 text eol=crlf
+
+# Known binary types (never normalize)
+*.so binary
+*.a binary
+*.apk binary
+*.aab binary
+*.jar binary
+*.dex binary
+*.jks binary
+*.keystore binary
+*.tar binary
+*.zip binary
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.webp binary
+*.ico binary
+*.icns binary
+*.ttf binary
+*.otf binary
+*.fnt binary
+*.ogg binary
+*.mp3 binary
+*.wav binary
+*.img binary
+*.scm binary
+*.txd binary
+*.dff binary
+*.col binary
+*.ifp binary
+*.gxt binary
+*.bin binary
+*.dll binary

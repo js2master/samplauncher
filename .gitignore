@@ -1,0 +1,45 @@
+# Gradle & Build outputs
+.gradle/
+build/
+app/build/
+app/.cxx/
+.cxx/
+.externalNativeBuild/
+captures/
+*.apk
+*.aab
+*.ap_
+
+# IDE & Local configuration
+.idea/
+*.iml
+*.ipr
+*.iws
+local.properties
+.vscode/
+
+# Signing & Secrets (never commit production keys or Firebase configs)
+*.jks
+*.keystore
+app/google-services.json
+
+# Proprietary Rockstar GTA:SA Android v2.10 binaries & APK assets
+# Populated locally via tools/engine/prepare_gtasa.py from your own GTA:SA v2.10 APK (never commit)
+app/src/main/jniLibs/*/libGTASA.so
+app/src/main/jniLibs/*/libImmEmulatorJ.so
+app/src/main/assets/*
+!app/src/main/assets/monetloader_lib.zip
+tools/_so/
+
+# OS & Temp files
+.DS_Store
+Thumbs.db
+Desktop.ini
+*.log
+*.tmp
+nul
+__pycache__/
+*.pyc
+
+# Local game data (large / copyrighted - keep out of VCS)
+dist/

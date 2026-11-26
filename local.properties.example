@@ -1,0 +1,15 @@
+# Copy this file to local.properties (gitignored) and adjust paths for your machine.
+# Android Studio generates sdk.dir automatically when you open the project.
+
+# Android SDK path (use forward slashes or escaped backslashes on Windows):
+# Windows: sdk.dir=C\:\\Users\\<YourUser>\\AppData\\Local\\Android\\Sdk
+# macOS:   sdk.dir=/Users/<YourUser>/Library/Android/sdk
+# Linux:   sdk.dir=/home/<YourUser>/Android/Sdk
+sdk.dir=/path/to/Android/Sdk
+
+# Optional: Release signing configuration (can also be supplied via environment variables).
+# Debug builds use the standard Android debug keystore automatically.
+# SAMP_STORE_FILE=keystore.jks
+# SAMP_STORE_PASSWORD=your_store_password
+# SAMP_KEY_ALIAS=your_key_alias
+# SAMP_KEY_PASSWORD=your_key_password
