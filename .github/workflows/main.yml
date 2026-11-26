@@ -54,6 +54,9 @@ jobs:
       - name: Build debug APK
         run: ./gradlew assembleDebug -PskipGtasaCheck=true --no-daemon --stacktrace
 
+      - name: Run self-check
+        run: python3 tests/check.py --require-apk
+
       - name: Rename APK for the artifact
         run: cp app/build/outputs/apk/debug/samp.apk samp-debug.apk
 
