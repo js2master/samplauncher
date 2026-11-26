@@ -54,6 +54,9 @@ jobs:
       - name: Create local.properties
         run: echo "sdk.dir=${ANDROID_HOME}" > local.properties
 
+      - name: Fix case-sensitive Bass header
+        run: cp app/src/main/cpp/SAMPMOBILE/Deps/Bass/Bass.h app/src/main/cpp/SAMPMOBILE/Deps/Bass/bass.h
+
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@v4
 
